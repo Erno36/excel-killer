@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Reglas de negocio · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>5. Columnas calculadas y reglas</h2>
+  <p class="help">Elegí un tipo de cálculo y completá solo los campos que aparecen. Las reglas se aplican en el orden de la lista; no se ejecuta código ni fórmulas de Excel.</p>
+  <form method="post" action="{{ url_for('add_business_rule') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="output_column">Nombre de la columna resultante</label>
+    <input id="output_column" name="output_column" type="text" required maxlength="128">
+    <label for="rule_type">Tipo de regla</label>
+    <select id="rule_type" name="rule_type" required data-conditional-control>
+      <option value="formula">Fórmula aritmética (columna o número · + − × ÷ · columna o número)</option>
+      <option value="if_then_else">SI / ENTONCES / SINO</option>
+      <option value="date_diff">Diferencia entre fechas</option>
+    </select>
+
+    <fieldset data-show-when="rule_type:formula">
+      <legend>Fórmula aritmética</legend>
+      <p>Usá el nombre exacto de una columna existente o un literal numérico. Ejemplo: Importe × 0.4.</p>
+      <label for="left">Operando izquierdo</label>
+      <input id="left" name="left" type="text">
+      <label for="formula_operator">Operador</label>
+      <select id="formula_operator" name="formula_operator">
+        <option value="*">Multiplicar</option>
+        <option value="+">Sumar</option>
+        <option value="-">Restar</option>
+        <option value="/">Dividir</option>
+      </select>
+      <label for="right">Operando derecho</label>
+      <input id="right" name="right" type="text">
+      <label for="format">Formato</label>
+      <select id="format" name="format">
+        <option value="number">Número</option>
+        <option value="text">Texto con dos decimales</option>
+      </select>
+    </fieldset>
+
+    <fieldset data-show-when="rule_type:if_then_else" hidden>
+      <legend>Regla SI / ENTONCES / SINO</legend>
+      <p>Se pueden configurar hasta tres condiciones, combinadas con AND u OR. Dejá la columna vacía para omitir una condición.</p>
+      {% for condition_index in range(3) %}
+        <div class="grid">
+          <div>
+            <label for="condition_column_{{ condition_index }}">Columna de condición {{ condition_index + 1 }}</label>
+            <select id="condition_column_{{ condition_index }}" name="condition_column">
+              <option value="">— Sin condición —</option>
+              {% for column in columns %}<option value="{{ column }}">{{ column }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="condition_operator_{{ condition_index }}">Operador</label>
+            <select id="condition_operator_{{ condition_index }}" name="condition_operator">
+              {% for operator in operators %}<option value="{{ operator }}">{{ operator }}</option>{% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="condition_value_{{ condition_index }}">Valor a comparar</label>
+            <input id="condition_value_{{ condition_index }}" name="condition_value" type="text">
+          </div>
+        </div>
+      {% endfor %}
+      <label for="combinator">Combinar condiciones</label>
+      <select id="combinator" name="combinator">
+        <option value="AND">Todas (AND)</option>
+        <option value="OR">Cualquiera (OR)</option>
+      </select>
+      <label for="value_true">Valor si se cumple</label>
+      <input id="value_true" name="value_true" type="text">
+      <label for="value_false">Valor si no se cumple</label>
+      <input id="value_false" name="value_false" type="text">
+    </fieldset>
+
+    <fieldset data-show-when="rule_type:date_diff" hidden>
+      <legend>Diferencia de fechas</legend>
+      <label for="col_a">Fecha A</label>
+      <select id="col_a" name="col_a">{% for column in columns %}<option value="{{ column }}">{{ column }}</option>{% endfor %}</select>
+      <label for="col_b">Fecha B</label>
+      <select id="col_b" name="col_b">{% for column in columns %}<option value="{{ column }}">{{ column }}</option>{% endfor %}</select>
+      <label for="unit">Unidad</label>
+      <select id="unit" name="unit">
+        <option value="days">Días</option><option value="months">Meses</option><option value="years">Años</option>
+      </select>
+      <label class="checkbox"><input type="checkbox" name="absolute" value="yes"> Usar diferencia absoluta</label>
+    </fieldset>
+    <button type="submit">Agregar regla</button>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Reglas configuradas</h3>
+  {% if rules %}
+    {% set rule_labels = {"if_then_else": "Condición SI / ENTONCES / SINO", "formula": "Fórmula aritmética", "date_diff": "Diferencia entre fechas"} %}
+    <ol>
+      {% for rule in rules %}
+        <li>
+          {{ rule.output_column }} · {{ rule_labels.get(rule.rule_type, rule.rule_type) }}
+          <form method="post" action="{{ url_for('remove_business_rule', rule_index=loop.index0) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="secondary" type="submit">Quitar</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p>No configuraste columnas calculadas; podés continuar sin reglas.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('apply_business_rules_route') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Aplicar reglas y revisar resultado</button>
+  </form>
+</section>
+<form method="post" action="{{ url_for('skip_business_rules') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="secondary" type="submit">Omitir reglas y revisar resultado</button>
+</form>
+<a class="back-link" href="{{ url_for('cross_config_page') }}">← Volver a configurar el cruce</a>
+{% endblock %}

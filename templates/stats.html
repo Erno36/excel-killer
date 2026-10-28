@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Estadísticas descriptivas · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Estadísticas descriptivas</h2>
+  <dl class="summary">
+    <div><dt>Filas</dt><dd>{{ stats.total_rows }}</dd></div>
+    <div><dt>Columnas</dt><dd>{{ stats.total_cols }}</dd></div>
+    <div><dt>Coincidencias</dt><dd>{{ stats.matched_rows if stats.matched_rows is not none else "—" }}</dd></div>
+    <div><dt>Solo archivo izquierdo</dt><dd>{{ stats.left_only_rows if stats.left_only_rows is not none else "—" }}</dd></div>
+    <div><dt>Solo archivo derecho</dt><dd>{{ stats.right_only_rows if stats.right_only_rows is not none else "—" }}</dd></div>
+  </dl>
+  <p>Los identificadores detectados se tratan como texto y se excluyen de estadísticas numéricas. La auditoría registra solo cantidades y nombres de columnas, no los valores calculados.</p>
+  <details>
+  <summary>Ver detalle estadístico por columna</summary>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Columna</th><th>Tipo</th><th>Filas</th><th>Vacíos</th><th>% vacíos</th><th>Valores únicos</th><th>Suma</th><th>Promedio</th><th>Mínimo</th><th>Máximo</th><th>Fechas desde/hasta</th></tr>
+      </thead>
+      <tbody>
+      {% for column in stats.columns %}
+        <tr>
+          <td>{{ column.name }}</td><td>{{ column.dtype_label }}</td><td>{{ column.total_rows }}</td>
+          <td>{{ column.null_count }}</td><td>{{ "%.1f"|format(column.null_pct) }}%</td><td>{{ column.unique_count }}</td>
+          <td>{{ column.num_sum if column.num_sum is not none else "—" }}</td>
+          <td>{{ column.num_mean if column.num_mean is not none else "—" }}</td>
+          <td>{{ column.num_min if column.num_min is not none else "—" }}</td>
+          <td>{{ column.num_max if column.num_max is not none else "—" }}</td>
+          <td>{% if column.date_min or column.date_max %}{{ column.date_min or "—" }} – {{ column.date_max or "—" }}{% else %}—{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="11">No hay columnas para analizar.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  </details>
+</section>
+<section class="card">
+  <h2>Armar estadísticas configurables</h2>
+  <p class="help">Empezá eligiendo una medida. Agregá dimensiones solo si necesitás separar el resultado por categorías. Los identificadores se pueden contar, pero no sumar ni promediar.</p>
+  <form method="post" action="{{ url_for('configure_statistics') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <details>
+      <summary>Agrupar por columnas (opcional)</summary>
+      <fieldset>
+      <legend>Elegí las columnas para separar los resultados</legend>
+      {% for column in columns %}
+        <label class="checkbox"><input type="checkbox" name="dimensions" value="{{ column }}"> {{ column }}</label>
+      {% endfor %}
+      <label class="checkbox">
+        <input type="checkbox" name="confirm_dimensions" value="yes">
+        Confirmo que los valores de las dimensiones pueden mostrarse en pantalla.
+      </label>
+      </fieldset>
+    </details>
+    <fieldset>
+      <legend>Qué querés calcular</legend>
+      {% for measure_index in range(1) %}
+        <div class="grid">
+          <div>
+            <label for="measure_operation_{{ measure_index }}">Operación {{ measure_index + 1 }}</label>
+            <select id="measure_operation_{{ measure_index }}" name="measure_operation" data-conditional-control>
+              <option value="">— No usar —</option>
+              {% for operation, label in measure_operations %}
+                <option value="{{ operation }}" {% if measure_index == 0 and operation == "count_rows" %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="measure_column_{{ measure_index }}">Columna (si corresponde)</label>
+            <select id="measure_column_{{ measure_index }}" name="measure_column" data-show-when="measure_operation_{{ measure_index }}:count_nonempty,count_distinct,empty,sum,mean,min,max" hidden>
+              <option value="">— Sin columna —</option>
+              {% for column in columns %}<option value="{{ column }}">{{ column }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+      {% endfor %}
+      <details>
+        <summary>Agregar más medidas (opcional)</summary>
+        {% for measure_index in range(1, 4) %}
+          <div class="grid">
+            <div>
+              <label for="measure_operation_{{ measure_index }}">Operación {{ measure_index + 1 }}</label>
+              <select id="measure_operation_{{ measure_index }}" name="measure_operation" data-conditional-control>
+                <option value="">— No usar —</option>
+                {% for operation, label in measure_operations %}
+                  <option value="{{ operation }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="measure_column_{{ measure_index }}">Columna (si corresponde)</label>
+              <select id="measure_column_{{ measure_index }}" name="measure_column" data-show-when="measure_operation_{{ measure_index }}:count_nonempty,count_distinct,empty,sum,mean,min,max" hidden>
+                <option value="">— Elegir columna —</option>
+                {% for column in columns %}<option value="{{ column }}">{{ column }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+        {% endfor %}
+      </details>
+    </fieldset>
+    <button type="submit">Calcular estadísticas</button>
+  </form>
+</section>
+{% if configured_columns %}
+  <section class="card">
+    <h3>Resumen configurado</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>{% for column in configured_columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+        <tbody>
+        {% for row in configured_rows %}
+          <tr>{% for column in configured_columns %}<td>{{ row[column] }}</td>{% endfor %}</tr>
+        {% else %}
+          <tr><td colspan="{{ configured_columns|length }}">No hay grupos para mostrar.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <form method="post" action="{{ url_for('export_configured_statistics') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">Exportar resumen estadístico</button>
+    </form>
+  </section>
+{% endif %}
+<a class="button-link" href="{{ url_for('show_result') }}">Volver al resultado</a>
+{% endblock %}

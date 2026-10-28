@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Confirmar encabezados · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>2. Confirmar fila de encabezado</h2>
+  <p>Se detecta automaticamente una fila entre las primeras 20. Revisa la hoja y la fila sugerida para cada archivo; podes corregir ambas.</p>
+  {% if recipe_error %}
+    <div class="notice warning">
+      <strong>No se pudo completar la ejecución automática.</strong>
+      <p>{{ recipe_error }}</p>
+      <p>Los archivos siguen cargados. Podés revisar los encabezados y continuar paso a paso.</p>
+    </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('set_headers') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for item in files %}
+      {% set index = loop.index0 %}
+      <fieldset class="file-card">
+        <legend>{{ item.label }} · {{ item.filename }}</legend>
+        <p>{{ item.metadata.row_count }} filas detectadas · Hoja: {{ item.metadata.sheet_used }}</p>
+        {% if item.is_virtual %}
+          <p>Se usa el resultado del cruce anterior como primera fuente.</p>
+        {% else %}
+        <label for="sheet_{{ index }}">Hoja</label>
+        <select id="sheet_{{ index }}" name="sheet_{{ index }}" required>
+          <option value="-1">Combinar todas las hojas</option>
+          {% for sheet in item.metadata.sheet_names %}
+            <option value="{{ loop.index0 }}" {% if sheet == item.metadata.sheet_used %}selected{% endif %}>{{ sheet }}</option>
+          {% endfor %}
+        </select>
+        <label for="header_{{ index }}">Fila que contiene los nombres de columnas</label>
+        <select id="header_{{ index }}" name="header_{{ index }}" required>
+          {% for row in range(1, item.metadata.header_scan_rows + 1) %}
+            <option value="{{ row - 1 }}" {% if row - 1 == item.metadata.header_row_index %}selected{% endif %}>
+              Fila {{ row }}{% if row - 1 == item.metadata.header_row_index %} · sugerida{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        {% endif %}
+        <p><strong>Columnas detectadas:</strong> {{ item.metadata.column_names | join(", ") }}</p>
+        {% if item.metadata.warnings %}
+          <ul>{% for warning in item.metadata.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+        {% endif %}
+      </fieldset>
+    {% endfor %}
+    <button type="submit">Confirmar columnas y continuar</button>
+  </form>
+</section>
+<a class="back-link" href="{{ url_for('index') }}">← Volver a archivos (la carga se conserva)</a>
+{% endblock %}

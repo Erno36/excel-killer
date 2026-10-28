@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Cargar archivos · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>1. Cargar archivos</h2>
+  <p class="help">El recorrido es guiado: cargar archivos → confirmar encabezados → limpiar → configurar el cruce → revisar y exportar.</p>
+  {% if staged_files %}
+    <div class="notice">
+      <strong>Hay archivos ya cargados en esta sesión.</strong>
+      <ul>{% for item in staged_files %}<li>{{ item.filename }} · {{ item.metadata.row_count }} filas</li>{% endfor %}</ul>
+      <a class="button-link" href="{{ url_for('review_headers') }}">Continuar con esta carga</a>
+    </div>
+  {% endif %}
+  <p>Selecciona entre 2 y {{ max_files }} archivos Excel. El tamano maximo es {{ max_size_mb }} MB por archivo.</p>
+  <form method="post" action="{{ url_for('upload_files') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="files">Archivos .xlsx o .xls</label>
+    <input id="files" name="files" type="file" accept=".xlsx,.xls" multiple required>
+    {% if recipes %}
+      <details>
+        <summary>Usar una configuración guardada (opcional)</summary>
+        <p class="help">Al elegir una receta podés ejecutarla automáticamente o usarla como punto de partida y revisar cada paso.</p>
+        <label for="recipe_id">Configuración</label>
+        <select id="recipe_id" name="recipe_id" data-recipe-control>
+          <option value="">— Configurar manualmente —</option>
+          {% for recipe in recipes %}
+            <option value="{{ recipe.recipe_id }}">{{ recipe.name }} · {{ recipe.file_specs|length }} archivos</option>
+          {% endfor %}
+        </select>
+      </details>
+    {% endif %}
+    <div class="actions">
+      <button type="submit" name="run_mode" value="manual">Cargar y configurar paso a paso</button>
+      {% if recipes %}
+        <button type="submit" name="run_mode" value="automatic" id="automatic-recipe-button" class="secondary" hidden>
+          Cargar y ejecutar la configuración automáticamente
+        </button>
+      {% endif %}
+    </div>
+  </form>
+</section>
+{% if staged_files %}
+  <form method="post" action="{{ url_for('reset_workflow') }}" data-confirm="¿Finalizar y borrar los archivos de esta sesión?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="secondary" type="submit">Finalizar sesión y borrar la carga</button>
+  </form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,50 @@
+# docker-compose.yml — cruzador-excel-web
+#
+# Uso:
+#   1. Copiar .env.docker a .env y configurar CRUZADOR_WEB_SECRET
+#   2. docker compose up --build
+#   3. Abrir http://localhost:8080
+#   4. Crear primer usuario: docker compose exec web python scripts/create_user.py
+#
+# NOTA: El build context es .. (directorio desarrollo/) porque la app importa
+# módulos de ../cruzador_excel/. No cambiar el context sin actualizar el Dockerfile.
+#
+# RED: se usa una subnet fija (192.168.100.0/28) para que el gateway sea
+# siempre 192.168.100.1. Eso permite que CRUZADOR_WEB_ALLOWED_CLIENTS sea
+# determinístico (la app rechaza tráfico de IPs no reconocidas).
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: cruzador_excel_web/Dockerfile
+    ports:
+      - "8080:8000"
+    env_file:
+      - .env
+    volumes:
+      - cruzador_data:/var/lib/cruzador-excel-web
+      - cruzador_logs:/var/log/cruzador-excel-web
+    networks:
+      piano_net:
+        ipv4_address: 192.168.100.2
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/login')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  cruzador_data:
+    driver: local
+  cruzador_logs:
+    driver: local
+
+networks:
+  piano_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/28

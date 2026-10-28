@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}No se pudo completar · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>No se pudo completar la solicitud</h2>
+  <p class="error-message" role="alert">{{ message }}</p>
+  <div class="notice warning">
+    <strong>Referencia de error:</strong> {{ error_id }}
+  </div>
+  {% if not audit_available %}
+  <div class="notice warning" role="alert">
+    <strong>No fue posible registrar la auditoría.</strong><br>
+    {{ audit_failure }} Contactá a soporte y conservá la referencia {{ error_id }}.
+  </div>
+  {% endif %}
+  <a class="button-link" href="{{ url_for('index') }}">Volver a archivos / continuar la sesión</a>
+</section>
+{% endblock %}

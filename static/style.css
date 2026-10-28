@@ -1,0 +1,62 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, sans-serif;
+  color: #172b3e;
+  background: #f3f6fa;
+}
+
+body { margin: 0; }
+header, main, footer { max-width: 1080px; margin: auto; padding: 18px 24px; }
+header { border-bottom: 4px solid #1a5fa8; background: #fff; max-width: none; }
+header h1, header p { max-width: 1032px; margin: 8px auto; }
+header span { color: #e67e22; }
+main { min-height: 65vh; }
+footer { color: #657587; font-size: .85rem; }
+.stepper { display: flex; gap: 8px; overflow-x: auto; margin: 18px 0 24px; padding: 0 0 8px; }
+.step { display: flex; align-items: center; gap: 8px; min-width: max-content; color: #657587; font-size: .9rem; }
+.step-number { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #aebdcb; border-radius: 50%; background: white; font-weight: 700; }
+.step.active { color: #164d7f; font-weight: 700; }
+.step.active .step-number, .step.complete .step-number { color: white; background: #1a5fa8; border-color: #1a5fa8; }
+.step.complete { color: #1a5fa8; }
+.card { background: white; border: 1px solid #d5dee8; border-radius: 8px; padding: 22px; margin: 18px 0; }
+h2 { color: #164d7f; margin-top: 0; }
+label { display: block; font-weight: 700; margin: 14px 0 6px; }
+input[type="file"], input[type="text"], input[type="password"], input[type="number"], select { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #aebdcb; border-radius: 4px; background: white; }
+button, .button-link { display: inline-block; margin-top: 18px; padding: 10px 16px; border: 0; border-radius: 4px; background: #1a5fa8; color: white; font-weight: 700; text-decoration: none; cursor: pointer; }
+button:hover, .button-link:hover { background: #154f8e; }
+button.secondary { background: white; color: #42586d; border: 1px solid #aebdcb; margin: 4px 0 18px; }
+button.warning-button { background: #9c4e00; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.actions button, .actions .button-link { margin: 12px 0 0; }
+.back-link { display: inline-block; margin: 10px 0; color: #164d7f; font-weight: 700; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.help { color: #53677a; line-height: 1.5; }
+.file-card { background: #f7f9fc; border: 1px solid #d5dee8; border-radius: 6px; padding: 14px; margin: 12px 0; }
+[hidden] { display: none !important; }
+details { border: 1px solid #d5dee8; border-radius: 5px; padding: 12px 14px; margin: 12px 0; background: #fff; }
+details > summary { cursor: pointer; color: #164d7f; font-weight: 700; }
+details[open] > summary { margin-bottom: 12px; }
+.notice { border-left: 4px solid #1a5fa8; background: #eaf3fb; padding: 12px 16px; margin: 14px 0; }
+.notice.warning { border-color: #b86100; background: #fff5e8; }
+fieldset { border: 1px solid #d5dee8; border-radius: 5px; margin: 18px 0; padding: 16px; }
+legend { color: #164d7f; font-weight: 700; padding: 0 6px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.checkbox { display: flex; align-items: center; gap: 8px; }
+.checkbox input { width: auto; }
+.user-bar { display: flex; align-items: center; justify-content: flex-end; gap: 16px; }
+.user-bar form { margin: 0; }
+.user-bar button { margin: 0; }
+.summary { display: flex; flex-wrap: wrap; gap: 12px; }
+.summary div { background: #f3f6fa; padding: 10px 16px; border-radius: 4px; }
+.summary dt { font-size: .85rem; color: #657587; }
+.summary dd { margin: 4px 0 0; font-size: 1.2rem; font-weight: 700; }
+.table-wrap { overflow: auto; max-height: 55vh; border: 1px solid #d5dee8; }
+table { border-collapse: collapse; width: 100%; background: white; }
+th, td { text-align: left; border: 1px solid #d5dee8; padding: 7px 9px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+th { position: sticky; top: 0; background: #164d7f; color: white; }
+@media (max-width: 600px) {
+  header, main, footer { padding: 14px; }
+  .card { padding: 16px; }
+  .stepper { gap: 14px; }
+  .step { font-size: .8rem; }
+}

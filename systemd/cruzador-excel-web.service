@@ -1,0 +1,30 @@
+[Unit]
+Description=Cruzador Excel Web - local validation prototype
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/banco-piano/desarrollo/cruzador_excel_web
+EnvironmentFile=/etc/cruzador-excel-web.env
+Environment=PYTHONUNBUFFERED=1
+Environment=APP_ENV=production
+Environment=CRUZADOR_WEB_COOKIE_SECURE=1
+Environment=CRUZADOR_WEB_REQUIRE_SECRET=1
+Environment=CRUZADOR_WEB_DB_PATH=/var/lib/cruzador-excel-web/cruzador.db
+Environment=CRUZADOR_WEB_RECIPES_DIR=/var/lib/cruzador-excel-web/recipes
+ExecStart=/opt/banco-piano/venv/bin/gunicorn --workers 1 --threads 4 --bind 127.0.0.1:8000 --timeout 120 app:app
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/cruzador-excel-web
+LogsDirectory=cruzador-excel-web
+StateDirectory=cruzador-excel-web
+
+[Install]
+WantedBy=multi-user.target

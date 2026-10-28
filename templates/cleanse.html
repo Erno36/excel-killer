@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Limpieza de datos · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>3. Limpieza de datos</h2>
+  <p class="help">Elegí un archivo, una columna y una operación. Los parámetros se muestran según la operación elegida. La limpieza se aplica sobre copias; los originales no se modifican.</p>
+  {% if recipe_warnings %}
+    <div class="notice warning"><strong>La configuración guardada no coincide completamente con los archivos:</strong><ul>{% for warning in recipe_warnings %}<li>{{ warning }}</li>{% endfor %}</ul>Revisa las columnas y reglas antes de continuar.</div>
+  {% endif %}
+  <form method="post" action="{{ url_for('add_cleansing_rule') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="file_index">Archivo</label>
+    <select id="file_index" name="file_index" required>
+      {% for entry in entries %}
+        <option value="{{ loop.index0 }}">{{ entry.label }} · {{ entry.metadata.sheet_used }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="column">Columna</label>
+    <select id="column" name="column" required>
+      {% for entry in entries %}
+        {% set entry_index = loop.index0 %}
+        {% for column in entry.metadata.column_names %}
+          <option value="{{ entry_index }}::{{ column }}">{{ entry.label }} · {{ column }}</option>
+        {% endfor %}
+      {% endfor %}
+    </select>
+
+    <label for="operation">Operación</label>
+    <select id="operation" name="operation" required data-conditional-control>
+      {% for operation, label in [
+        ("strip_spaces", "Quitar espacios extras"),
+        ("to_uppercase", "Convertir a mayúsculas"),
+        ("to_lowercase", "Convertir a minúsculas"),
+        ("capitalize", "Primera letra mayúscula"),
+        ("replace_literal", "Reemplazar texto literal"),
+        ("replace_regex", "Reemplazar usando expresión regular"),
+        ("remove_chars", "Eliminar caracteres"),
+        ("keep_only_digits", "Conservar solo dígitos"),
+        ("normalize_date", "Normalizar formato de fecha"),
+        ("fill_empty", "Rellenar celdas vacías"),
+        ("pad_left", "Completar a la izquierda"),
+        ("drop_column", "Eliminar columna"),
+        ("filter_date_before", "Filtrar fecha hasta"),
+        ("filter_date_after", "Filtrar fecha desde"),
+        ("filter_date_range", "Filtrar rango de fechas")
+      ] %}
+        <option value="{{ operation }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <fieldset data-show-when="operation:fill_empty" hidden>
+      <legend>Rellenar celdas vacías</legend>
+      <label for="value">Valor para rellenar vacíos</label>
+      <input id="value" name="value" type="text">
+    </fieldset>
+    <fieldset data-show-when="operation:replace_literal,replace_regex" hidden>
+      <legend>Reemplazar texto</legend>
+      <label for="find">Texto literal a buscar</label>
+      <input id="find" name="find" type="text">
+      <label for="pattern">Patrón regex</label>
+      <input id="pattern" name="pattern" type="text">
+      <label for="replace">Reemplazo</label>
+      <input id="replace" name="replace" type="text">
+    </fieldset>
+    <fieldset data-show-when="operation:remove_chars" hidden>
+      <legend>Eliminar caracteres</legend>
+      <label for="chars">Caracteres a eliminar</label>
+      <input id="chars" name="chars" type="text">
+    </fieldset>
+    <fieldset data-show-when="operation:pad_left" hidden>
+      <legend>Completar a la izquierda</legend>
+      <label for="width">Ancho para completar</label>
+      <input id="width" name="width" type="number" min="0" max="64" value="0">
+      <label for="char">Carácter para completar</label>
+      <input id="char" name="char" type="text" maxlength="1" value="0">
+    </fieldset>
+    <fieldset data-show-when="operation:normalize_date" hidden>
+      <legend>Normalizar fecha</legend>
+      <label for="format_from">Formato de fecha de origen (strptime)</label>
+      <input id="format_from" name="format_from" type="text" value="%d/%m/%Y">
+      <label for="format_to">Formato de fecha de salida (strftime)</label>
+      <input id="format_to" name="format_to" type="text" value="%Y-%m-%d">
+    </fieldset>
+    <fieldset data-show-when="operation:filter_date_before,filter_date_after" hidden>
+      <legend>Filtrar por fecha de corte</legend>
+      <label for="date">Fecha de corte (dd/mm/aaaa u otro formato reconocido)</label>
+      <input id="date" name="date" type="text">
+    </fieldset>
+    <fieldset data-show-when="operation:filter_date_range" hidden>
+      <legend>Filtrar por rango de fechas</legend>
+      <label for="date_from">Fecha inicial del rango</label>
+      <input id="date_from" name="date_from" type="text">
+      <label for="date_to">Fecha final del rango</label>
+      <input id="date_to" name="date_to" type="text">
+    </fieldset>
+    <button type="submit">Agregar regla</button>
+  </form>
+</section>
+
+<section class="card">
+  <h3>Reglas configuradas</h3>
+  {% if rules %}
+    {% set operation_labels = {
+      "strip_spaces": "Quitar espacios extras",
+      "to_uppercase": "Convertir a mayúsculas",
+      "to_lowercase": "Convertir a minúsculas",
+      "capitalize": "Primera letra mayúscula",
+      "replace_literal": "Reemplazar texto literal",
+      "replace_regex": "Reemplazar con expresión regular",
+      "remove_chars": "Eliminar caracteres",
+      "keep_only_digits": "Conservar solo dígitos",
+      "normalize_date": "Normalizar formato de fecha",
+      "fill_empty": "Rellenar celdas vacías",
+      "pad_left": "Completar a la izquierda",
+      "drop_column": "Eliminar columna",
+      "filter_date_before": "Filtrar fecha hasta",
+      "filter_date_after": "Filtrar fecha desde",
+      "filter_date_range": "Filtrar rango de fechas"
+    } %}
+    <ol>
+      {% for rule in rules %}
+        <li>
+          {{ rule.file_label }} · {{ rule.column }} · {{ operation_labels.get(rule.operation, rule.operation) }}
+          <form method="post" action="{{ url_for('remove_cleansing_rule', rule_index=loop.index0) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="secondary" type="submit">Quitar</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ol>
+  {% else %}
+    <p>No agregaste reglas. Podés continuar sin modificar los datos.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('apply_cleansing_rules') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Aplicar limpieza y configurar cruces</button>
+  </form>
+</section>
+<a class="back-link" href="{{ url_for('review_headers') }}">← Volver a encabezados</a>
+{% endblock %}

@@ -1,0 +1,81 @@
+# ── Entorno Python ─────────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+
+# ── Configuración y secretos ─────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ── Datos locales, recetas y auditoría ────────────────────────────────────────
+# No subir bases locales, archivos de trabajo, recetas ni logs de auditoría.
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.jsonl
+logs/
+.audit/
+.recipes/
+recipes/
+data/local/
+
+# ── Archivos cargados y resultados ───────────────────────────────────────────
+uploads/
+temporary_uploads/
+tmp/
+exports/
+salidas/
+output/
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+
+# ── Docker y runtime ──────────────────────────────────────────────────────────
+docker-compose.override.yml
+.docker/
+*.pid
+*.sock
+
+# ── Herramientas e IDE ────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+
+# ── Sistema operativo ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+.AppleDouble
+.LSOverride
+
+# ── Copias temporales y artefactos ───────────────────────────────────────────
+*.bak
+*.tmp
+*.temp
+*~
+.cache/

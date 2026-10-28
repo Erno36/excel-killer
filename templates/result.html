@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Revision del resultado · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>6. Revisar resultado antes de exportar</h2>
+  <dl class="summary">
+    <div><dt>Filas de salida</dt><dd>{{ result.row_count }}</dd></div>
+    <div><dt>Filas visibles con filtros</dt><dd id="filtered-result-count">{{ filtered_count }}</dd></div>
+    <div><dt>Tipo de cruce</dt><dd>{{ result.join_type }}</dd></div>
+    <div><dt>Tiempo</dt><dd>{{ "%.1f"|format(result.duration_ms) }} ms</dd></div>
+    {% if result.matched_rows is not none %}<div><dt>Coincidencias</dt><dd>{{ result.matched_rows }}</dd></div>{% endif %}
+    {% if result.left_only_rows is not none %}<div><dt>Solo izquierda</dt><dd>{{ result.left_only_rows }}</dd></div>{% endif %}
+    {% if result.right_only_rows is not none %}<div><dt>Solo derecha</dt><dd>{{ result.right_only_rows }}</dd></div>{% endif %}
+  </dl>
+  {% if result.warnings %}
+    <div class="notice warning"><strong>Advertencias</strong><ul>{% for warning in result.warnings %}<li>{{ warning }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <p><a class="button-link" href="{{ url_for('result_stats') }}">Ver estadísticas descriptivas</a></p>
+
+  <form id="result-filter-form" method="post" action="{{ url_for('filter_result') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <fieldset>
+      <legend>Buscar y filtrar filas (solo en esta sesión)</legend>
+      <label for="quick_search">Buscar texto en cualquier columna</label>
+      <input id="quick_search" name="quick_search" type="text" value="{{ quick_search }}">
+      {% for filter_index in range(3) %}
+        {% set filter_item = current_filters[filter_index] if current_filters|length > filter_index else none %}
+        <details {% if filter_item %}open{% endif %}>
+          <summary>Condición {{ filter_index + 1 }}{% if filter_item %} · activa{% else %} (opcional){% endif %}</summary>
+        <fieldset>
+          <legend>Condición {{ filter_index + 1 }}</legend>
+          <label for="filter_column_{{ filter_index }}">Columna</label>
+          <select id="filter_column_{{ filter_index }}" name="column">
+            <option value="">— Sin condición —</option>
+            {% for column in columns %}
+              <option value="{{ column }}" {% if filter_item and filter_item.column == column %}selected{% endif %}>{{ column }}</option>
+            {% endfor %}
+          </select>
+          <label for="filter_operator_{{ filter_index }}">Operador</label>
+          <select id="filter_operator_{{ filter_index }}" name="operator">
+            {% for operator in filter_operators %}
+              <option value="{{ operator }}" {% if filter_item and filter_item.operator == operator %}selected{% endif %}>{{ operator }}</option>
+            {% endfor %}
+          </select>
+          <label for="filter_value_{{ filter_index }}">Valor</label>
+          <input id="filter_value_{{ filter_index }}" name="value" type="text" value="{{ filter_item.value if filter_item else '' }}">
+          <label for="filter_value2_{{ filter_index }}">Segundo valor (para rango de fechas)</label>
+          <input id="filter_value2_{{ filter_index }}" name="value2" type="text" value="{{ filter_item.value2 if filter_item else '' }}">
+        </fieldset>
+        </details>
+      {% endfor %}
+      <button type="submit">Aplicar filtro</button>
+    </fieldset>
+  </form>
+  <form method="post" action="{{ url_for('clear_result_filter') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="secondary" type="submit">Quitar filtros</button>
+  </form>
+
+  {% if preview_truncated %}<p>Vista previa limitada a 50 filas. La exportacion descarga el resultado completo sin los filtros de visualizacion.</p>{% endif %}
+  <p id="preview-status" class="help" aria-live="polite"></p>
+  <div class="table-wrap" id="result-preview" data-preview-url="{{ url_for('preview_result') }}">
+    <table>
+      <thead><tr><th>Fila</th>{% for column in columns %}<th>{{ column }}</th>{% endfor %}<th>Acciones</th></tr></thead>
+      <tbody id="result-preview-body">
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.source_index + 1 }}</td>
+          {% for column in columns %}<td>{{ row.values[column] }}</td>{% endfor %}
+          <td>
+            <form method="post" action="{{ url_for('delete_result_row', row_index=row.source_index) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="secondary" type="submit">Eliminar fila</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="{{ columns|length + 2 }}">No hay filas para mostrar.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <details>
+  <summary>Editar una celda (opcional)</summary>
+  <p class="help">La edición afecta solo el resultado en memoria, no los archivos de origen. Usá el número de fila mostrado en la tabla.</p>
+  <form method="post" action="{{ url_for('edit_result_cell') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="row_index">Número de fila</label>
+    <input id="row_index" name="row_index" type="number" min="0" max="{{ result.row_count - 1 }}" required>
+    <label for="edit_column">Columna</label>
+    <select id="edit_column" name="column" required>{% for column in columns %}<option value="{{ column }}">{{ column }}</option>{% endfor %}</select>
+    <label for="edit_value">Nuevo valor</label>
+    <input id="edit_value" name="value" type="text" required>
+    <button type="submit">Guardar edición</button>
+  </form>
+  </details>
+</section>
+
+<section class="card">
+  <form method="post" action="{{ url_for('export_result') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Exportar resultado a Excel</button>
+  </form>
+</section>
+<section class="card">
+  <details>
+  <summary>Agregar otra fuente y continuar el cruce (opcional)</summary>
+  <p class="help">El resultado actual será la primera fuente. Las modificaciones manuales también se conservan.</p>
+  <form method="post" action="{{ url_for('extend_cross') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="additional_files">Archivos Excel adicionales</label>
+    <input id="additional_files" name="files" type="file" accept=".xlsx,.xls" multiple required>
+    <button type="submit">Continuar cruce</button>
+  </form>
+  </details>
+</section>
+<section class="card">
+  <details>
+  <summary>Guardar esta configuración para reutilizarla (opcional)</summary>
+  <p class="help">Se guardan etiquetas y columnas esperadas, reglas de limpieza, claves y reglas calculadas. No se guardan archivos, filas, valores de filtro ni resultados.</p>
+  <form method="post" action="{{ url_for('save_current_recipe') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="recipe_name">Nombre</label>
+    <input id="recipe_name" name="name" type="text" maxlength="100" required>
+    <label for="recipe_description">Descripción (opcional)</label>
+    <input id="recipe_description" name="description" type="text" maxlength="500">
+    <button type="submit">Guardar configuración</button>
+  </form>
+  </details>
+</section>
+<a class="back-link" href="{{ url_for('business_rules') }}">← Volver a columnas calculadas</a>
+<form method="post" action="{{ url_for('reset_workflow') }}" data-confirm="¿Finalizar la sesión y borrar los archivos y el resultado de trabajo?">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="secondary" type="submit">Finalizar y borrar la sesion</button>
+</form>
+{% endblock %}

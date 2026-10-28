@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Cruzador Excel Web{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='ui.js') }}" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Cruzador Excel <span>Web</span></h1>
+    <p>Herramienta para cargar, limpiar, cruzar y analizar archivos Excel.</p>
+  </header>
+  <main>
+    {% if current_user %}
+      <div class="user-bar">
+        <span>Sesión: {{ current_user }}</span>
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="secondary" type="submit">Cerrar sesión</button>
+        </form>
+      </div>
+    {% endif %}
+    {% if current_user and workflow_step %}
+      <nav class="stepper" aria-label="Pasos del proceso">
+        {% for step in workflow_steps %}
+          <div class="step {% if step.number == workflow_step %}active{% elif step.number < workflow_step %}complete{% endif %}">
+            <span class="step-number">{{ step.number }}</span>
+            <span>{{ step.label }}</span>
+          </div>
+        {% endfor %}
+      </nav>
+    {% endif %}
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}<div class="notice">{{ message }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer>Banco Piano · Version local de validacion</footer>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Configurar cruce · Cruzador Excel{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>4. Elegir columnas de cruce</h2>
+  <p class="help">Cada bloque compara dos archivos. Elegí la columna equivalente en ambos lados. Usá más filas solo si necesitás una clave compuesta.</p>
+  {% if validation_error %}
+    <div class="notice warning" role="alert">
+      <strong>Revisá la configuración del cruce</strong>
+      <p>{{ validation_error }}</p>
+      <p>Seleccioná una columna en ambos lados o dejá ese par completamente vacío.</p>
+    </div>
+  {% endif %}
+  {% if warnings %}
+    <div class="notice warning">
+      <strong>Advertencia: claves repetidas</strong>
+      <ul>{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
+      <p>Las claves repetidas pueden multiplicar filas. Continua solo si el resultado esperado admite esa cardinalidad.</p>
+      {% if confirm_duplicates %}
+        <p>La receta ya completó los demás pasos. Confirmá para ejecutar el cruce y abrir la revisión del resultado.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('run_cross') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% for step in range(entries|length - 1) %}
+      {% set chosen = selected_pairs[step] if selected_pairs is defined and selected_pairs|length > step else (suggested_pairs[step] if suggested_pairs|length > step and suggested_pairs[step] else []) %}
+      <fieldset>
+        <legend>{{ entries[step].label }} → {{ entries[step + 1].label }}</legend>
+        {% for pair_index in range(5) %}
+          {% set pair = chosen[pair_index] if chosen|length > pair_index else ("", "") %}
+          {% if pair_index == 1 %}<details><summary>Agregar claves adicionales (opcional)</summary>{% endif %}
+          <div class="grid">
+            <div>
+              <label for="left_{{ step }}_{{ pair_index }}">{{ entries[step].label }} · clave {{ pair_index + 1 }}</label>
+              <select id="left_{{ step }}_{{ pair_index }}" name="left_key_{{ step }}">
+                <option value="">— No usar —</option>
+                {% for column in entries[step].metadata.column_names %}
+                  <option value="{{ column }}" {% if pair[0] == column %}selected{% endif %}>{{ column }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label for="right_{{ step }}_{{ pair_index }}">{{ entries[step + 1].label }} · clave {{ pair_index + 1 }}</label>
+              <select id="right_{{ step }}_{{ pair_index }}" name="right_key_{{ step }}">
+                <option value="">— No usar —</option>
+                {% for column in entries[step + 1].metadata.column_names %}
+                  <option value="{{ column }}" {% if pair[1] == column %}selected{% endif %}>{{ column }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          {% if pair_index == 4 %}</details>{% endif %}
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
+    <details>
+      <summary>Opciones del cruce</summary>
+      <label for="join_type">Qué filas conservar</label>
+      <select id="join_type" name="join_type">
+        {% for value, label in [("inner", "Solo coincidencias"), ("left", "Todas las del primer archivo"), ("outer", "Todas las filas de ambos archivos")] %}
+          <option value="{{ value }}" {% if selected_join == value or (not selected_join and value == "outer") %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <label class="checkbox">
+        <input type="checkbox" name="normalize" value="yes" {% if normalize is not defined or normalize %}checked{% endif %}>
+        Ignorar diferencias de espacios y mayúsculas/minúsculas en las claves
+      </label>
+    </details>
+    {% if confirm_duplicates %}
+      <input type="hidden" name="confirm_duplicates" value="yes">
+      <input type="hidden" name="confirmed_key_signature" value="{{ key_signature }}">
+      <button class="warning-button" type="submit">Confirmar advertencia y ejecutar cruce</button>
+    {% else %}
+      <button type="submit">Ejecutar cruce</button>
+    {% endif %}
+  </form>
+</section>
+<a class="back-link" href="{{ url_for('clean_data') }}">← Volver a limpieza (se conserva la carga)</a>
+{% endblock %}
